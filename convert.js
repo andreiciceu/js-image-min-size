@@ -28,35 +28,45 @@ function getAllFiles(dirPath, arrayOfFiles) {
 async function convertFile(file) {
   const image = sharp(file);
   const meta = await image.metadata();
-  if (meta.width < MIN_SIZE || meta.height | MIN_SIZE) {
+
+  if (meta.width < MIN_SIZE || meta.height < MIN_SIZE) {
     const zoom = Math.ceil(MIN_SIZE / Math.min(meta.width, meta.height));
 
     await image
       .resize({ width: meta.width * zoom, height: meta.height * zoom })
       .jpeg()
       .toFile(`${file}_resized.jpg`);
+    return true;
   }
+  return false;
 }
 
-function processFiles(dirPath) {
+async function processFiles(dirPath) {
   const files = getAllFiles(dirPath);
+  for (let idx = 0; idx < files.length; idx++) {
+    let fileName = files[idx];
 
-  files.forEach(async (fileName, idx) => {
     if (fileName.includes("_resized")) {
-      // fs.unlinkSync(fileName);
-      return;
+      fs.unlinkSync(fileName);
+      continue;
     }
-    if (!isImage(fileName)) return;
+    if (!isImage(fileName)) {
+      continue;
+    }
 
-    console.log(`${idx + 1} / ${files.length} | ${fileName}`);
     try {
-      await convertFile(fileName);
+      let done = await convertFile(fileName);
+      console.log(
+        `${idx + 1} / ${files.length} | ${fileName}   > ${
+          done ? "RESIZED" : "no-need"
+        }`
+      );
     } catch (err) {
       console.error("Failed converting", fileName, err);
     }
-  });
-}
+  }
 
-console.log("@ !! DONE !! @");
+  console.log("@ !! DONE !! @");
+}
 
 processFiles(DIR);
