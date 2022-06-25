@@ -3,7 +3,7 @@ const path = require("path");
 const sharp = require("sharp");
 
 const DIR = process.argv[2];
-const MIN_SIZE = parseInt(process.argv?.[3]) || 256;
+const MIN_SIZE = 256;
 
 function isImage(url) {
   return /\.(jpg|jpeg|png|webp|avif|gif|tiff)$/.test(url);
@@ -42,12 +42,21 @@ function processFiles(dirPath) {
   const files = getAllFiles(dirPath);
 
   files.forEach(async (fileName, idx) => {
-    if (fileName.includes("_resized")) return;
+    if (fileName.includes("_resized")) {
+      // fs.unlinkSync(fileName);
+      return;
+    }
     if (!isImage(fileName)) return;
 
-    console.log(`${idx} / ${files.length} | ${fileName}`);
-    await convertFile(fileName);
+    console.log(`${idx + 1} / ${files.length} | ${fileName}`);
+    try {
+      await convertFile(fileName);
+    } catch (err) {
+      console.error("Failed converting", fileName, err);
+    }
   });
 }
+
+console.log("@ !! DONE !! @");
 
 processFiles(DIR);
