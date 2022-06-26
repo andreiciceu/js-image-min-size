@@ -9,6 +9,12 @@ function isImage(url) {
   return /\.(jpg|jpeg|png|webp|avif|gif|tiff)$/.test(url);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 function getAllFiles(dirPath, arrayOfFiles) {
   files = fs.readdirSync(dirPath);
 
@@ -36,15 +42,24 @@ async function convertFile(file) {
       .resize({ width: meta.width * zoom, height: meta.height * zoom })
       .jpeg()
       .toFile(`${file}_resized.jpg`);
-    return true;
+    return [true];
   }
-  return false;
+  return [false, `${meta.width} ${meta.height}`];
 }
 
 async function processFiles(dirPath) {
   const files = getAllFiles(dirPath);
   for (let idx = 0; idx < files.length; idx++) {
     let fileName = files[idx];
+    // remove thumbnails
+    if (
+      fileName.includes("512x512") ||
+      fileName.includes("256x256") ||
+      fileName.includes("128x128")
+    ) {
+      fs.unlinkSync(fileName);
+      continue;
+    }
 
     if (fileName.includes("_resized")) {
       fs.unlinkSync(fileName);
@@ -55,15 +70,17 @@ async function processFiles(dirPath) {
     }
 
     try {
-      let done = await convertFile(fileName);
+      let [done, msg] = await convertFile(fileName);
       console.log(
         `${idx + 1} / ${files.length} | ${fileName}   > ${
           done ? "RESIZED" : "no-need"
-        }`
+        } ${msg}`
       );
     } catch (err) {
       console.error("Failed converting", fileName, err);
     }
+
+    // await sleep(10);
   }
 
   console.log("@ !! DONE !! @");
